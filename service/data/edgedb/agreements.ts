@@ -451,7 +451,7 @@ export class EdgeDBAgreementsRepository
         FILTER
             .id = <uuid>$agreementId
         SET {
-            versions := .versions UNION (
+            versions += (
               INSERT AgreementVersion {
                 current := False,
                 texts := (
