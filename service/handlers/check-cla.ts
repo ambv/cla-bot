@@ -64,9 +64,16 @@ class ClaCheckHandler {
     );
   }
 
-  getNotSignedComment(challengeUrl: string): string {
+  getNotSignedComment(challengeUrl: string, emails: string[]): string {
+    let emailsFormatted = "";
+    emails.sort();
+    emails.forEach((email) => {
+      emailsFormatted += `* ${email}\n`;
+    });
     return (
-      `Commit authors are required to sign the Contributor License Agreement. <br/> ` +
+      `The following commit authors need to sign the Contributor License Agreement:\n\n` +
+      `${emailsFormatted}\n` +
+      `Click the button to sign:<br/>` +
       `[![CLA not signed](${this._settings.url}/cla-not-signed.svg)](${challengeUrl})`
     );
   }
@@ -81,6 +88,11 @@ class ClaCheckHandler {
         data.pullRequest.id
       );
 
+    let emails: string[] = [];
+    if (data.authors !== null) {
+      emails = data.authors;
+    }
+
     if (commentInfo != null) {
       // Make sure that the comment is updated with failure information,
       // because the comment might have an outdated positive message.
@@ -93,7 +105,7 @@ class ClaCheckHandler {
         data.repository.ownerId,
         data.repository.fullName,
         commentInfo.commentId,
-        this.getNotSignedComment(challengeUrl)
+        this.getNotSignedComment(challengeUrl, emails)
       );
       return;
     }
@@ -102,7 +114,7 @@ class ClaCheckHandler {
       data.repository.ownerId,
       data.repository.fullName,
       data.pullRequest.number,
-      this.getNotSignedComment(challengeUrl)
+      this.getNotSignedComment(challengeUrl, emails)
     );
 
     await this._commentsRepository.storeCommentInfo(
@@ -112,25 +124,17 @@ class ClaCheckHandler {
     );
   }
 
-  async allAuthorsHaveSignedTheCla(allAuthors: string[]): Promise<boolean> {
-    // This code performs fine in realistic scenarios: most PRs will
-    // have a single author email, or only a few.
-    // However, someone might trick our service by faking a big number of
-    // unique users and a big number of commits.
-    // In such unhappy case, it makes sense to handle
-    // committers sequentially one by one, to not starve our resources for a
-    // single request.
-
+  async authorsWithoutCla(allAuthors: string[]): Promise<string[]> {
+    const result: string[] = [];
     for (let i = 0; i < allAuthors.length; i++) {
       const email = allAuthors[i];
 
       const cla = await this._claRepository.getClaByEmailAddress(email);
-
       if (cla == null) {
-        return false;
+        result.push(email);
       }
     }
-    return true;
+    return result;
   }
 
   getSuccessStatusTargetUrl(versionId: string): string {
@@ -145,16 +149,67 @@ class ClaCheckHandler {
     );
   }
 
-  @async_retry()
-  async checkCla(data: ClaCheckInput): Promise<void> {
-    // Is an agreement configured for the PR repository?
-    // if not, there is no need to do a check for CLA signing
+  private async completeClaCheck(
+    data: ClaCheckInput,
+    agreementVersionId: string
+  ): Promise<void> {
+    const statusUrl = this.getSuccessStatusTargetUrl(agreementVersionId);
+
+    await this._statusCheckService.createStatus(
+      data.repository.ownerId,
+      data.repository.fullName,
+      data.pullRequest.headSha,
+      new StatusCheckInput(
+        CheckState.success,
+        statusUrl,
+        SUCCESS_MESSAGE,
+        CLA_CHECK_CONTEXT
+      )
+    );
+
+    // if a comment was created, update its text;
+    const repository = this._commentsRepository;
+    const commentInfo = await repository.getCommentInfoByPullRequestId(
+      data.pullRequest.id
+    );
+
+    if (commentInfo == null) {
+      return;
+    }
+
+    await this._commentsService.updateComment(
+      data.repository.ownerId,
+      data.repository.fullName,
+      commentInfo.commentId,
+      this.getSignedComment(statusUrl)
+    );
+  }
+
+  async readAgreementVersionId(data: ClaCheckInput): Promise<string> {
+    if (data.agreementVersionId) {
+      return data.agreementVersionId;
+    }
+
     const currentAgreementForRepository = await this._agreementsRepository
       .getCurrentAgreementVersionForRepository(
         data.repository.fullName
       );
 
     if (!currentAgreementForRepository) {
+      throw new Error("Missing license version ID in state");
+    }
+
+    return currentAgreementForRepository.versionId;
+  }
+
+  @async_retry()
+  async checkCla(data: ClaCheckInput): Promise<void> {
+    // Is an agreement configured for the PR repository?
+    // if not, there is no need to do a check for CLA signing
+    let agreementVersionId = "";
+    try {
+      agreementVersionId = await this.readAgreementVersionId(data);
+    } catch (error) {
       return;
     }
 
@@ -165,52 +220,37 @@ class ClaCheckHandler {
         this._settings.preApprovedAccounts
       );
 
-    if (!allAuthors.length) {
-      throw new Error(
-        "Failed to extract the author emails for the pull request."
-      );
+
+    let emailsWithoutCla = [];
+    let challengeUrl = "";
+    if (allAuthors.length) {
+      // Store authors in the input state, so we don't need to fetch
+      // again the same information when validating each author
+      // (when each of them authorizes our app);
+      data.authors = await this.authorsWithoutCla(allAuthors);
+      challengeUrl = this.getTargetUrlWithChallenge(data);
+      emailsWithoutCla = data.authors;
     }
 
-    // Store authors in the input state, so we don't need to fetch
-    // again the same information when validating each author
-    // (when each of them authorizes our app);
-    data.authors = allAuthors.map((email) => email.toLowerCase());
-
-    let status: StatusCheckInput;
-
-    const challengeUrl = this.getTargetUrlWithChallenge(data);
-    const allAuthorsHaveSignedTheCla = await this.allAuthorsHaveSignedTheCla(
-      allAuthors
-    );
-
-    if (allAuthorsHaveSignedTheCla) {
-      status = new StatusCheckInput(
-        CheckState.success,
-        this.getSuccessStatusTargetUrl(
-          currentAgreementForRepository.versionId
-        ),
-        SUCCESS_MESSAGE,
-        CLA_CHECK_CONTEXT
-      );
+    if (!emailsWithoutCla.length) {
+      await this.completeClaCheck(data, agreementVersionId);
     } else {
-      status = new StatusCheckInput(
-        CheckState.failure,
-        challengeUrl,
-        FAILURE_MESSAGE,
-        CLA_CHECK_CONTEXT
+      await this._statusCheckService.createStatus(
+        data.repository.ownerId,
+        data.repository.fullName,
+        data.pullRequest.headSha,
+        new StatusCheckInput(
+          CheckState.failure,
+          challengeUrl,
+          FAILURE_MESSAGE,
+          CLA_CHECK_CONTEXT
+        )
       );
 
       // add a comment to increase visibility
       await this.addCommentWithNegativeStatus(data, challengeUrl);
     }
-
-    await this._statusCheckService.createStatus(
-      data.repository.ownerId,
-      data.repository.fullName,
-      data.pullRequest.headSha,
-      status
-    );
   }
 }
 
-export {ClaCheckHandler};
+export { ClaCheckHandler };

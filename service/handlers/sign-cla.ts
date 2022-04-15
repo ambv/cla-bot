@@ -1,15 +1,10 @@
 import {async_retry} from "../common/resiliency";
-import {
-  CheckState,
-  StatusCheckInput,
-  StatusChecksService,
-} from "../../service/domain/checks";
+import {StatusChecksService} from "../../service/domain/checks";
 import {
   ContributorLicenseAgreement,
   ClaCheckInput,
   ClaRepository,
 } from "../../service/domain/cla";
-import {CLA_CHECK_CONTEXT, SUCCESS_MESSAGE} from "./check-cla";
 import {ClaCheckHandler} from "./check-cla";
 import {
   CommentsRepository,
@@ -18,7 +13,6 @@ import {
 import {EmailInfo, UsersService} from "../../service/domain/users";
 import {inject, injectable} from "inversify";
 import {SafeError} from "../common/web";
-import {ServiceSettings} from "../settings";
 import {TokensHandler} from "./tokens";
 import {TYPES} from "../../constants/types";
 import {v4 as uuid} from "uuid";
@@ -32,7 +26,6 @@ class SignClaHandler {
   @inject(TYPES.UsersService) private _usersService: UsersService;
   @inject(TYPES.ClaRepository) private _claRepository: ClaRepository;
   @inject(TYPES.ClaCheckHandler) private _claCheckHandler: ClaCheckHandler;
-  @inject(TYPES.CommentsService) private _commentsService: CommentsService;
   @inject(TYPES.CommentsRepository)
   private _commentsRepository: CommentsRepository;
   @inject(TYPES.StatusChecksService)
@@ -69,54 +62,6 @@ class SignClaHandler {
     throw new Error("Missing authors information in state.");
   }
 
-  async completeClaCheck(data: ClaCheckInput): Promise<void> {
-    const agreementVersionId = this.readAgreementVersionId(data);
-    const statusUrl = this._claCheckHandler.getSuccessStatusTargetUrl(
-      agreementVersionId
-    );
-
-    await this._statusCheckService.createStatus(
-      data.repository.ownerId,
-      data.repository.fullName,
-      data.pullRequest.headSha,
-      new StatusCheckInput(
-        CheckState.success,
-        statusUrl,
-        SUCCESS_MESSAGE,
-        CLA_CHECK_CONTEXT
-      )
-    );
-
-    // if a commet was created, update its text;
-    const repository = this._commentsRepository;
-    const commentInfo = await repository.getCommentInfoByPullRequestId(
-      data.pullRequest.id
-    );
-
-    if (commentInfo == null) {
-      return;
-    }
-
-    await this._commentsService.updateComment(
-      data.repository.ownerId,
-      data.repository.fullName,
-      commentInfo.commentId,
-      this._claCheckHandler.getSignedComment(statusUrl)
-    );
-  }
-
-  async checkIfAllSigned(
-    data: ClaCheckInput,
-    authors: string[]
-  ): Promise<void> {
-    const handler = this._claCheckHandler;
-    const allSigned = await handler.allAuthorsHaveSignedTheCla(authors);
-
-    if (allSigned) {
-      await this.completeClaCheck(data);
-    }
-  }
-
   private getAllMatchingEmails(
     authors: string[],
     userEmails: EmailInfo[]
@@ -150,7 +95,7 @@ class SignClaHandler {
 
       this.ensureThatEmailIsVerified(matchingEmail);
 
-      // did the user already signed the CLA with this email address?
+      // did the user already sign the CLA with this email address?
       const existingCla = await this._claRepository.getClaByEmailAddress(
         matchingEmail.email.toLowerCase()
       );
@@ -159,13 +104,6 @@ class SignClaHandler {
         await this.createCla(username, matchingEmail, agreementVersionId);
       }
     }
-  }
-
-  readAgreementVersionId(data: ClaCheckInput): string {
-    if (!data.agreementVersionId) {
-      throw new Error("Missing license version id in state");
-    }
-    return data.agreementVersionId;
   }
 
   async signCla(
@@ -203,18 +141,16 @@ class SignClaHandler {
       );
     }
 
+    const handler = this._claCheckHandler;
+    const agreementVersionId = await handler.readAgreementVersionId(data);
+
     await this.handleAllMatchingEmails(
       user.login,
       matchingEmails,
-      this.readAgreementVersionId(data)
+      agreementVersionId
     );
 
-    if (authors.length === 1) {
-      // single author: the CLA is signed
-      await this.completeClaCheck(data);
-    } else {
-      await this.checkIfAllSigned(data, authors);
-    }
+    await handler.checkCla(data);
 
     return {
       redirectUrl: data.pullRequest.url,
