@@ -18,8 +18,9 @@ export class EdgeDBClaRepository
   async getClaByEmailAddress(
     email: string
   ): Promise<ContributorLicenseAgreement | null> {
-    const ghPseudoEmail = /^([0-9]+)\+([^@]+)@users\.noreply\.github\.com$/;
-    const ghEmailMatches = email.match(ghPseudoEmail);
+    const ghPseudoEmail = /^(?:[0-9]+)\+([^@]+)@users\.noreply\.github\.com$/;
+    const ghPseudoEmailOld = /^([^@+]+)@users\.noreply\.github\.com$/;
+    const ghEmailMatches = email.match(ghPseudoEmail) || email.match(ghPseudoEmailOld);
     let signed_cla = null;
     if (ghEmailMatches)
     {
@@ -34,7 +35,7 @@ export class EdgeDBClaRepository
           FILTER .normalized_username = str_lower(<str>$0)
           ORDER BY .email
           LIMIT 1;`,
-          [ghEmailMatches[2]]
+          [ghEmailMatches[1]]
         );
       });
     }
