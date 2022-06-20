@@ -93,6 +93,9 @@ module default {
 
         property username -> str;
 
+        property normalized_username := str_lower(.username);
+        index on (.normalized_username);
+
         required property creation_time -> datetime {
             default := datetime_current();
         }

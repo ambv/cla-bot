@@ -31,7 +31,7 @@ export class EdgeDBClaRepository
             creation_time,
             versionId := .agreement_version.id
           }
-          FILTER .username = <str>$0
+          FILTER .normalized_username = str_lower(<str>$0)
           ORDER BY .email
           LIMIT 1;`,
           [ghEmailMatches[2]]
