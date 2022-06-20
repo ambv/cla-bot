@@ -56,7 +56,7 @@ class SignClaHandler {
 
   private getAllAuthors(data: ClaCheckInput): string[] {
     if (data.authors) {
-      return data.authors;
+      return data.authors.map(email => email.toLowerCase());
     }
 
     throw new Error("Missing authors information in state.");
@@ -130,10 +130,9 @@ class SignClaHandler {
 
     if (!matchingEmails.length) {
       // The user who signed in is not among those who contributed to the PR
-      // NB: this can also happen if the user has a private email address,
-      // and wants to preserve email privacy when committing.
-      // As of today, it is unclear how this scenario should be handled.
-      //
+      // NB: private email address *are* passed in `getUserEmailAddresses`
+      // as well. Same for the pseudo-emails Github provides for each user
+      // in the form 12345678+USERNAME@users.noreply.github.com.
       throw new SafeError(
         `Thank you for authorizing our application, but the CLA must be signed ` +
           `by the users who contributed to the PR. ` +
