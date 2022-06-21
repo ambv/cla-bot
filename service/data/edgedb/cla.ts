@@ -20,7 +20,9 @@ export class EdgeDBClaRepository
   ): Promise<ContributorLicenseAgreement | null> {
     const ghPseudoEmail = /^(?:[0-9]+)\+([^@]+)@users\.noreply\.github\.com$/;
     const ghPseudoEmailOld = /^([^@+]+)@users\.noreply\.github\.com$/;
-    const ghEmailMatches = email.match(ghPseudoEmail) || email.match(ghPseudoEmailOld);
+    const ghEmailMatches = (
+      email.match(ghPseudoEmail) || email.match(ghPseudoEmailOld)
+    );
     let signed_cla = null;
     if (ghEmailMatches)
     {
