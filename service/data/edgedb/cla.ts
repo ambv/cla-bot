@@ -51,7 +51,7 @@ export class EdgeDBClaRepository
             creation_time,
             versionId := .agreement_version.id
           }
-          FILTER .normalized_email = str_lower(<str>$0)));`,
+          FILTER .normalized_email = normalize_email(<str>$0)));`,
           [email]
         );
       });
