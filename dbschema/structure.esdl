@@ -114,7 +114,7 @@ module default {
         };
         index on (.email);
 
-        property normalized_email := str_lower(.email);
+        property normalized_email := normalize_email(.email);
         constraint exclusive on (.normalized_email);
         index on (.normalized_email);
 
