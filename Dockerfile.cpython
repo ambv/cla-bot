@@ -38,4 +38,6 @@ COPY ./scripts/docker-entrypoint-clabot.py /home/docker-entrypoint.py
 COPY ./scripts/mv.py /home/mv.py
 COPY ./scripts/edb_healthcheck.py /home/edb_healthcheck.py
 COPY ./scripts/deployment.py /home/deployment.py
+RUN rm -rf /app/dbschema
+COPY dbschema /app/dbschema
 ENTRYPOINT ["/usr/bin/python3", "-u", "/home/docker-entrypoint.py"]
