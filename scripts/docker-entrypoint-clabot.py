@@ -31,7 +31,7 @@ def untangle_github_rsa_private_key() -> None:
 
     GITHUB_RSA_PRIVATE_KEY_SOURCE = os.environ["GITHUB_RSA_PRIVATE_KEY_SOURCE"]
     GITHUB_RSA_KEY_PATH = "/home/github-private-key.pem"
-    os.environ["GITHUB_RSA_PRIVATE_KEY"] = GITHUB_RSA_KEY_PATH
+    os.environ["GITHUB_RSA_PRIVATE_KEY_FILE"] = GITHUB_RSA_KEY_PATH
 
     with open(GITHUB_RSA_KEY_PATH, "w") as key_file:
         source = GITHUB_RSA_PRIVATE_KEY_SOURCE
