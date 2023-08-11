@@ -67,7 +67,6 @@ def make_prefix(
 
 
 def censor(s: str) -> str:
-    return s
     if s.startswith("--backend-dsn="):
         return "--backend-dsn=********"
     if s.startswith("--dsn="):
