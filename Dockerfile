@@ -1,34 +1,21 @@
-FROM node:14.16-buster-slim AS builder
+FROM node:18.16-bullseye-slim AS builder
 WORKDIR /app
-
 COPY . .
-
-# Big packages cause false network connectivity alarms: https://github.com/yarnpkg/yarn/issues/4890
+# Big packages cause false network connectivity alarms:
+# https://github.com/yarnpkg/yarn/issues/4890
 RUN yarn install --network-timeout 1000000
-
 RUN yarn next build
 
-FROM edgedb/edgedb-cli:linux-x86_64-latest AS edgedbcli
+FROM edgedb/edgedb-cli:nightly AS edgedbcli
 
-FROM node:14.16-buster-slim AS final
+FROM node:18.16-bullseye-slim AS final
+ENV NODE_ENV production
 WORKDIR /app
 COPY --from=builder /app .
 COPY --from=edgedbcli /usr/bin/edgedb /usr/bin/edgedb
 
-RUN set -ex; export DEBIAN_FRONTEND=noninteractive; \
-  apt-get update && \
-  apt-get install -y --no-install-recommends \
-  python3 python3-pip && \
-  pip3 --no-cache-dir install boto3
-
-ENV NODE_ENV production
-ENV CUSTOMER nobody
-ENV REGION us-east-2
-ENV SECRETS_PREFIX CLABOT_
-
 EXPOSE 80
 EXPOSE 443
 
-
-COPY docker-entrypoint.py /home/
-ENTRYPOINT ["/usr/bin/python3", "-u", "/home/docker-entrypoint.py"]
+COPY docker-entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

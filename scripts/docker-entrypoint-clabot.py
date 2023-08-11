@@ -64,6 +64,7 @@ async def main() -> None:
     # This is more complex than it's got to be because Heroku tries to inject some
     # log-streaming BS through shell.
     new_release = False
+    start_next = True
     argv = sys.argv[1:]
     if argv[0:2] == ["/bin/sh", "-c"]:
         argv = argv[2:]
@@ -77,8 +78,13 @@ async def main() -> None:
         cmd = argv[0]
         if matches(cmd, "deployment"):
             new_release = True
+            start_next = False
         elif matches(cmd, "default"):
             new_release = False
+            start_next = True
+        elif matches(cmd, "edb"):
+            new_release = False
+            start_next = False
         elif matches(cmd, "bash"):
             await mv.shutdown()
             # start the shell
@@ -117,7 +123,8 @@ async def main() -> None:
 
     untangle_github_rsa_private_key()
 
-    await mv.spawn("yarn", "next", "start", "-p", PORT)
+    if start_next:
+        await mv.spawn("yarn", "next", "start", "-p", PORT)
     await mv.wait_until_any_terminates()
 
 

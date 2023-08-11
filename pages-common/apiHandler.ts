@@ -25,7 +25,8 @@ export function createAPIHandler(methodHandlers: {
     const methodHandler = handlers[req.method!];
 
     if (!methodHandler) {
-      return res.status(405).end(`method ${req.method} not allowed`);
+      res.status(405).end(`method ${req.method} not allowed`);
+      return;
     }
 
     // Auth can be disabled on a per method basis because some admin api
@@ -43,7 +44,8 @@ export function createAPIHandler(methodHandlers: {
         const user = await readJWTBearer(req);
         (req as unknown as AuthContext).user = user;
       } catch (err: any) {
-        return res.status(401).end(err);
+        res.status(401).end(err);
+        return;
       }
     }
 

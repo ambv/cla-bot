@@ -14,7 +14,6 @@ import FileExamples, {FileExample} from "../../common/forms/file-examples";
 import {Button, TextField} from "@material-ui/core";
 import {AgreementListItem} from "../agreements/contracts";
 import DynamicSelect from "../../common/forms/select-named-dynamic";
-import {validateEmail} from "../../../service/common/emails";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import ErrorOutline from "@material-ui/icons/ErrorOutline";
 import NotInterestedIcon from "@material-ui/icons/NotInterested";
@@ -253,10 +252,6 @@ export class ClasImport extends Component<{}, ClasImportState> {
   }
 
   validateItem(entry: ImportUIEntry): void {
-    if (!validateEmail(entry.email)) {
-      entry.emailError = true;
-      entry.emailHelperText = "The email address is invalid";
-    }
     if (!entry.username) {
       entry.usernameError = true;
       entry.usernameHelperText = "Missing username";
@@ -354,14 +349,8 @@ export class ClasImport extends Component<{}, ClasImportState> {
   }
 
   render(): ReactElement {
-    const {
-      error,
-      submitError,
-      waiting,
-      selectedFile,
-      fileProblem,
-      entries,
-    } = this.state;
+    const {error, submitError, waiting, selectedFile, fileProblem, entries} =
+      this.state;
 
     return (
       <div>

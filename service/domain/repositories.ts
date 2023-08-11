@@ -15,18 +15,6 @@ export class Repository {
   fullName: string;
   agreementId: string;
   agreementName: string;
-
-  constructor(
-    id: string,
-    fullName: string,
-    agreementId: string,
-    agreementName: string
-  ) {
-    this.id = id;
-    this.fullName = fullName;
-    this.agreementId = agreementId;
-    this.agreementName = agreementName;
-  }
 }
 
 /**

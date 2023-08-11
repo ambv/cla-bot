@@ -1,4 +1,3 @@
-import fetch from "cross-fetch";
 import {expectSuccessfulResponse} from "../../common/web";
 
 export function hasMoreItems(response: Response): boolean {

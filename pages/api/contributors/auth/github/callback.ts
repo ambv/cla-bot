@@ -17,7 +17,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     // this is most likely a configuration error on our side
     // however, this might happen if the end user modified by hand the GitHub
     // login page url (for example, modifying the redirect_uri)
-    return res.status(400).end(error);
+    res.status(400).end(error);
+    return;
   }
 
   const rawState = req.query.state;

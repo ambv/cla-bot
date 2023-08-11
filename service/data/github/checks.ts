@@ -1,4 +1,3 @@
-import fetch from "cross-fetch";
 import {accessHandler, GitHubAccessHandler} from "./clientcredentials";
 import {async_retry} from "../../common/resiliency";
 import {
@@ -69,8 +68,9 @@ export class GitHubStatusChecksAPI implements StatusChecksService {
       const data: GitHubCommitItem[] = await response.json();
 
       data.forEach((item) => {
-        if (!(item.author && preApprovedAccounts.includes(item.author.login)))
-        {
+        if (
+          !(item.author && preApprovedAccounts.includes(item.author.login))
+        ) {
           authorsEmails.add(item.commit.author.email);
         }
       });
@@ -92,8 +92,8 @@ export class GitHubStatusChecksAPI implements StatusChecksService {
     pullRequestHeadSha: string,
     data: StatusCheckInput
   ): Promise<void> {
-    const accessToken = await this._access_token_handler
-      .getAccessTokenForAccount(
+    const accessToken =
+      await this._access_token_handler.getAccessTokenForAccount(
         targetAccountId
       );
 

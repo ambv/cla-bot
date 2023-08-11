@@ -18,16 +18,18 @@ export default createAPIHandler({
 
       if (typeof id !== "string") {
         // should never happen by definition
-        return res.status(400).end("Invalid object id");
+        res.status(400).end("Invalid object id");
+        return;
       }
 
       const data = await agreementsHandler.getAgreement(id);
 
       if (data === null) {
-        return res.status(404).json({
+        res.status(404).json({
           error: "Agreement not found",
           errorCode: "NotFound",
         });
+        return;
       }
 
       res.status(200).json(data);
@@ -40,7 +42,8 @@ export default createAPIHandler({
 
     if (typeof id !== "string") {
       // should never happen by definition
-      return res.status(400).end("Invalid object id");
+      res.status(400).end("Invalid object id");
+      return;
     }
 
     const body = req.body;

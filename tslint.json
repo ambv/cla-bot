@@ -1,5 +1,10 @@
 {
   "extends": "tslint:recommended",
+  "linterOptions": {
+    "exclude": [
+      "dbschema/edgeql-js/**"
+    ]
+  },
   "rules": {
     "max-line-length": {
       "options": [79]

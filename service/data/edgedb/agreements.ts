@@ -1,3 +1,5 @@
+import e from "../../../dbschema/edgeql-js";
+
 import {EdgeDBRepository} from "./base";
 import {injectable} from "inversify";
 import {
@@ -9,50 +11,6 @@ import {
   AgreementVersion,
   AgreementTextInput,
 } from "../../domain/agreements";
-import {ServerError} from "../../common/app";
-
-// The following interfaces describe the shape of DB entities,
-
-interface TextEntity {
-  id: string;
-  title: string;
-  text: string;
-  culture: string;
-  update_time: Date;
-  creation_time: Date;
-}
-
-interface VersionEntity {
-  id: string;
-  current: boolean;
-  draft: boolean;
-  creation_time: string;
-  agreement_id?: string[];
-  texts?: TextEntity[];
-}
-
-function mapTextEntity(entity: TextEntity): AgreementText {
-  return new AgreementText(
-    entity.id,
-    entity.title,
-    entity.text,
-    entity.culture,
-    "",
-    new Date(entity.update_time),
-    new Date(entity.creation_time)
-  );
-}
-
-function mapVersionEntity(entity: VersionEntity): AgreementVersion {
-  return new AgreementVersion(
-    entity.id,
-    entity.current,
-    entity.draft,
-    entity.agreement_id ? entity.agreement_id[0] : undefined,
-    new Date(entity.creation_time),
-    entity.texts ? entity.texts.map(mapTextEntity) : undefined
-  );
-}
 
 @injectable()
 export class EdgeDBAgreementsRepository
@@ -60,68 +18,51 @@ export class EdgeDBAgreementsRepository
   implements AgreementsRepository
 {
   async getAgreement(agreementId: string): Promise<Agreement | null> {
-    const agreement = await this.run(async (connection) => {
-      return await connection.querySingle<{
-        id: string;
-        name: string;
-        description: string;
-        creation_time: Date;
-        versions: VersionEntity[];
-      }>(
-        `SELECT Agreement {
-          name,
-          description,
-          creation_time,
-          versions: {
-            current,
-            draft,
-            creation_time
-          } ORDER BY .current DESC
-        }  FILTER .id = <uuid>$id;`,
-        {
-          id: agreementId,
-        }
-      );
-    });
+    return await this.run(async (connection) =>
+      e
+        .select(e.Agreement, (agreement) => ({
+          id: true,
+          name: true,
+          description: true,
+          creationTime: agreement.creation_time,
+          versions: (version) => ({
+            id: true,
+            current: true,
+            draft: true,
+            creationTime: version.creation_time,
+            order: version.current,
+          }),
 
-    if (!agreement) return null;
-
-    return new Agreement(
-      agreement.id,
-      agreement.name,
-      agreement.description,
-      agreement.creation_time,
-      agreement.versions.map(mapVersionEntity)
+          filter_single: {id: agreementId},
+        }))
+        .run(connection)
     );
   }
 
   async getAgreementVersion(
     versionId: string
   ): Promise<AgreementVersion | null> {
-    const item = await this.run(async (connection) => {
-      return await connection.querySingle<VersionEntity>(
-        `SELECT AgreementVersion {
-          current,
-          draft,
-          creation_time,
-          agreement_id := .<versions[IS Agreement].id,
-          texts: {
-            text,
-            title,
-            culture,
-            update_time,
-            creation_time
-          }
-        }  FILTER .id = <uuid>$id;`,
-        {
-          id: versionId,
-        }
-      );
-    });
+    return await this.run(async (connection) =>
+      e
+        .select(e.AgreementVersion, (version) => ({
+          id: true,
+          current: true,
+          draft: true,
+          creationTime: version.creation_time,
+          agreementId: e.assert_single(version["<versions[is Agreement]"].id),
+          texts: (text) => ({
+            id: true,
+            text: true,
+            title: true,
+            culture: true,
+            updateTime: text.update_time,
+            creationTime: text.creation_time,
+          }),
 
-    if (!item) return null;
-
-    return mapVersionEntity(item);
+          filter_single: {id: versionId},
+        }))
+        .run(connection)
+    );
   }
 
   async updateAgreement(
@@ -129,25 +70,18 @@ export class EdgeDBAgreementsRepository
     name: string,
     description: string
   ): Promise<void> {
-    await this.run(async (connection) => {
-      await connection.queryRequiredSingle(
-        `
-        UPDATE Agreement
-        FILTER .id = <uuid>$id
-        SET {
-          name := <str>$name,
-          description := <str>$description,
-          update_time := <datetime>$update_time,
-        }
-        `,
-        {
-          id,
-          name,
-          description,
-          update_time: new Date(),
-        }
-      );
-    });
+    await this.run(async (connection) =>
+      e
+        .update(e.Agreement, (agreement) => ({
+          filter: e.op(agreement.id, "=", e.uuid(id)),
+          set: {
+            name,
+            description,
+            update_time: e.datetime_current(),
+          },
+        }))
+        .run(connection)
+    );
   }
 
   async updateAgreementText(
@@ -155,213 +89,152 @@ export class EdgeDBAgreementsRepository
     title: string,
     body: string
   ): Promise<void> {
-    await this.run(async (connection) => {
-      await connection.queryRequiredSingle(
-        `
-        UPDATE AgreementText
-        FILTER .id = <uuid>$id
-        SET {
-          title := <str>$title,
-          text := <str>$body,
-          update_time := <datetime>$update_time,
-        }
-        `,
-        {
-          id,
-          title,
-          body,
-          update_time: new Date(),
-        }
-      );
-    });
+    await this.run(async (connection) =>
+      e
+        .update(e.AgreementText, (text) => ({
+          filter: e.op(text.id, "=", e.uuid(id)),
+          set: {
+            title,
+            text: body,
+            update_time: e.datetime_current(),
+          },
+        }))
+        .run(connection)
+    );
   }
 
   async updateAgreementVersion(id: string, draft: boolean): Promise<void> {
-    await this.run(async (connection) => {
-      await connection.queryRequiredSingle(
-        `
-        UPDATE AgreementVersion
-        FILTER .id = <uuid>$id
-        SET {
-          draft := <bool>$draft
-        }
-        `,
-        {
-          id,
-          draft,
-        }
-      );
-    });
+    await this.run(async (connection) =>
+      e
+        .update(e.AgreementVersion, (ver) => ({
+          filter: e.op(ver.id, "=", e.uuid(id)),
+          set: {
+            draft,
+          },
+        }))
+        .run(connection)
+    );
   }
 
   async getCurrentAgreementVersionForRepository(
     repositoryFullName: string
   ): Promise<RepositoryAgreementInfo | null> {
-    const item = await this.run(async (connection) => {
-      return await connection.querySingle<{
-        id: string;
-        agreement: {currentVersion: {id: string} | null};
-      }>(
-        `SELECT Repository {
-          agreement: {
-            currentVersion := assert_single(
-              .versions {
-                id
-              } FILTER .current = True and .texts.culture = <str>$culture
-            )
-          }
-        } FILTER .full_name = <str>$full_name;`,
-        {
-          culture: "en",
-          full_name: repositoryFullName,
-        }
-      );
-    });
+    const Version = e.assert_single(
+      e.select(e.AgreementVersion, (v) => {
+        const ver = v["<versions[is Agreement]"];
+        const repo = ver["<agreement[is Repository]"];
 
-    if (!item) return null;
+        return {
+          filter: e.op(
+            e.op(v.current, "and", e.op(v.texts.culture, "=", "en")),
+            "and",
+            e.op(repo.full_name, "=", repositoryFullName)
+          ),
+        };
+      })
+    );
 
-    const currentVersion = item.agreement.currentVersion;
-    if (!currentVersion) {
-      return null;
-    }
-    return new RepositoryAgreementInfo(currentVersion.id);
+    return await this.run(async (connection) =>
+      e
+        .select(Version, (v) => ({
+          versionId: v.id,
+        }))
+        .run(connection)
+    );
   }
 
   async getAgreementTextForRepository(
     repositoryFullName: string,
     cultureCode: string
   ): Promise<AgreementText | null> {
-    const item = await this.run(async (connection) => {
-      return await connection.querySingle<{
-        agreement: {
-          currentVersion: {
-            id: string;
-            text: {
-              id: string;
-              text: string;
-              title: string;
-              culture: string;
-              update_time: Date;
-              creation_time: Date;
-            };
-          };
+    const Text = e.assert_single(
+      e.select(e.AgreementText, (text) => {
+        const ver = text["<texts[is AgreementVersion]"];
+        const agr = ver["<versions[is Agreement]"];
+        const repo = agr["<agreement[is Repository]"];
+
+        return {
+          filter: e.op(
+            e.op(e.op(text.culture, "=", cultureCode), "and", ver.current),
+            "and",
+            e.op(repo.full_name, "=", repositoryFullName)
+          ),
         };
-      }>(
-        `SELECT Repository {
-          agreement: {
-            currentVersion := assert_single(
-              .versions {
-                text := assert_single (
-                  .texts {
-                    text,
-                    title,
-                    culture,
-                    update_time,
-                    creation_time
-                  } FILTER .culture = <str>$culture
-                )
-              } FILTER .current = True
-            )
-          }
-        } FILTER .full_name = <str>$full_name;`,
-        {
-          culture: cultureCode,
-          full_name: repositoryFullName,
-        }
-      );
-    });
+      })
+    );
 
-    if (!item) return null;
-
-    const currentVersion = item.agreement.currentVersion;
-    const versionText = currentVersion.text;
-    const text = mapTextEntity(versionText);
-    text.versionId = currentVersion.id;
-    return text;
+    return await this.run(async (connection) =>
+      e
+        .select(Text, (text) => ({
+          id: true,
+          title: true,
+          text: true,
+          culture: true,
+          versionId: e.assert_single(text["<texts[is AgreementVersion]"].id),
+          updateTime: text.update_time,
+          creationTime: text.creation_time,
+        }))
+        .run(connection)
+    );
   }
 
   async getAgreementText(
     versionId: string,
     cultureCode: string
   ): Promise<AgreementText | null> {
-    const version = await this.run(async (connection) => {
-      return await connection.querySingle<{
-        id: string;
-        text: {text: string; title: string; culture: string};
-      }>(
-        `SELECT AgreementVersion {
-          text := assert_single(
-            .texts {
-              text,
-              title,
-              culture
-            } FILTER .culture = <str>$culture
-          )
-        } FILTER .id = <uuid>$version_id;`,
-        {
-          culture: cultureCode,
-          version_id: versionId,
-        }
-      );
-    });
+    const Text = e.assert_single(
+      e.select(e.AgreementText, (text) => {
+        const ver = text["<texts[is AgreementVersion]"];
 
-    if (!version) return null;
+        return {
+          filter: e.op(
+            e.op(text.culture, "=", cultureCode),
+            "and",
+            e.op(ver.id, "=", e.uuid(versionId))
+          ),
+        };
+      })
+    );
 
-    const versionText = version.text as TextEntity;
-    return mapTextEntity(versionText);
+    return await this.run(async (connection) =>
+      e
+        .select(Text, (text) => ({
+          id: true,
+          title: true,
+          text: true,
+          culture: true,
+          versionId: e.assert_single(text["<texts[is AgreementVersion]"].id),
+          updateTime: text.update_time,
+          creationTime: text.creation_time,
+        }))
+        .run(connection)
+    );
   }
 
   async getAgreements(): Promise<AgreementListItem[]> {
-    const items = await this.run(async (connection) => {
-      return await connection.query<{
-        id: string;
-        name: string;
-        description: string;
-        creation_time: Date;
-      }>(
-        `SELECT Agreement {
-          name,
-          description,
-          creation_time
-        };`
-      );
-    });
-
-    return items.map(
-      (entity) =>
-        new AgreementListItem(
-          entity.id,
-          entity.name,
-          entity.description,
-          entity.creation_time
-        )
+    return await this.run(async (connection) =>
+      e
+        .select(e.Agreement, (agreement) => ({
+          id: true,
+          name: true,
+          description: true,
+          creationTime: agreement.creation_time,
+        }))
+        .run(connection)
     );
   }
 
   async getCompleteAgreements(): Promise<AgreementListItem[]> {
-    const items = await this.run(async (connection) => {
-      return await connection.query<{
-        id: string;
-        name: string;
-        description: string;
-        creation_time: Date;
-      }>(
-        `SELECT Agreement {
-          name,
-          description,
-          creation_time
-        } FILTER .versions.current = True;`
-      );
-    });
-
-    return items.map(
-      (entity) =>
-        new AgreementListItem(
-          entity.id,
-          entity.name,
-          entity.description,
-          entity.creation_time
-        )
+    return await this.run(async (connection) =>
+      e
+        .select(e.Agreement, (agreement) => ({
+          id: true,
+          name: true,
+          description: true,
+          creationTime: agreement.creation_time,
+          filter: agreement.versions.current,
+        }))
+        .run(connection)
     );
   }
 
@@ -373,38 +246,33 @@ export class EdgeDBAgreementsRepository
     // version and English text
 
     return await this.run(async (connection) => {
-      const creationTime = new Date();
-      const item = await connection.queryRequiredSingle<{id: string}>(
-        `
-        INSERT Agreement {
-          name := <str>$name,
-          description := <str>$description,
-          creation_time := <datetime>$creation_time,
-          versions := {
-              (INSERT AgreementVersion {
-                  current := False,
-                  texts := (
-                      (INSERT AgreementText {
-                          title := <str>$initial_title,
-                          text := <str>$initial_text,
-                          culture := <str>$initial_culture,
-                          update_time := datetime_current()
-                      })
-                  )
-              })
-          }
-        };
-        `,
-        {
-          name: name,
-          description: description || "",
-          creation_time: creationTime,
-          initial_title: name,
-          initial_text: "# Modify this markdown",
-          initial_culture: "en",
-        }
-      );
-      return new AgreementListItem(item.id, name, description, creationTime);
+      const NewAgreement = e.insert(e.Agreement, {
+        name,
+        description,
+        creation_time: e.datetime_current(),
+        update_time: e.datetime_current(),
+        versions: e.insert(e.AgreementVersion, {
+          current: false,
+          draft: true,
+          creation_time: e.datetime_current(),
+          texts: e.insert(e.AgreementText, {
+            title: name,
+            text: "# Your markdown text here",
+            culture: "en",
+            creation_time: e.datetime_current(),
+            update_time: e.datetime_current(),
+          }),
+        }),
+      });
+
+      return e
+        .select(NewAgreement, (agreement) => ({
+          id: true,
+          name: true,
+          description: true,
+          creationTime: agreement.creation_time,
+        }))
+        .run(connection);
     });
   }
 
@@ -413,23 +281,16 @@ export class EdgeDBAgreementsRepository
     versionId: string
   ): Promise<void> {
     await this.run(async (connection) => {
-      await connection.query(
-        `
-      WITH X := (SELECT AgreementVersion {
-        id,
-        agreement_id := .<versions[IS Agreement].id
-      }
-      FILTER .agreement_id = <uuid>$agreement_id)
-      UPDATE X
-      SET {
-          current := (.id = <uuid>$version_id)
-      };
-      `,
-        {
-          agreement_id: agreementId,
-          version_id: versionId,
-        }
-      );
+      e.update(e.AgreementVersion, (ver) => ({
+        filter: e.op(
+          ver["<versions[is Agreement]"].id,
+          "=",
+          e.uuid(agreementId)
+        ),
+        set: {
+          current: e.op(ver.id, "=", e.uuid(versionId)),
+        },
+      })).run(connection);
     });
   }
 
@@ -445,40 +306,50 @@ export class EdgeDBAgreementsRepository
     const {title, text, culture} = texts[0];
 
     return await this.run(async (connection) => {
-      const item = await connection.querySingle(
-        `
-        UPDATE Agreement
-        FILTER
-            .id = <uuid>$agreementId
-        SET {
-            versions += (
-              INSERT AgreementVersion {
-                current := False,
-                texts := (
-                    (INSERT AgreementText {
-                        title := <str>$title,
-                        text := <str>$text,
-                        culture := <str>$culture,
-                        update_time := datetime_current()
-                    })
-                )
-              }
-            )
-        }
-        `,
-        {
-          agreementId,
+      const Version = e.insert(e.AgreementVersion, {
+        current: false,
+        draft: true,
+        creation_time: e.datetime_current(),
+        texts: e.insert(e.AgreementText, {
           title,
           text,
           culture,
-        }
-      );
+          creation_time: e.datetime_current(),
+          update_time: e.datetime_current(),
+        }),
+      });
 
-      if (!item) throw new ServerError("Expected a result.");
+      const Update = e.update(e.Agreement, (agreement) => ({
+        filter: e.op(agreement.id, "=", e.uuid(agreementId)),
+        set: {
+          versions: {
+            "+=": Version,
+          },
+        },
+      }));
 
-      // TODO: how to get the new item id?
-      // I would like to return it
-      return mapVersionEntity(item as VersionEntity);
+      return e
+        .with(
+          [Version, Update],
+          e.select(Version, (version) => ({
+            id: true,
+            current: true,
+            draft: true,
+            creationTime: version.creation_time,
+            agreementId: e.assert_single(
+              version["<versions[is Agreement]"].id
+            ),
+            texts: (t) => ({
+              id: true,
+              text: true,
+              title: true,
+              culture: true,
+              updateTime: t.update_time,
+              creationTime: t.creation_time,
+            }),
+          }))
+        )
+        .run(connection);
     });
   }
 }

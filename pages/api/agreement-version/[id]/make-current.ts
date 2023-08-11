@@ -16,12 +16,13 @@ export default createAPIHandler({
 
     if (typeof id !== "string") {
       // should never happen by definition
-      return res.status(400).end("Invalid object id");
+      res.status(400).end("Invalid object id");
+      return;
     }
 
     // updates the text of an existing agreement version
     // id is a version id;
     await agreementsHandler.makeAgreementVersionCurrent(id);
-    return res.status(204).end();
+    res.status(204).end();
   },
 });

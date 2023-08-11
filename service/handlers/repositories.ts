@@ -1,9 +1,9 @@
 import {inject, injectable} from "inversify";
 import {TYPES} from "../../constants/types";
 import {
-  RepositoriesService,
+  type RepositoriesService,
   ExternalRepository,
-  RepositoriesRepository,
+  type RepositoriesRepository,
   Repository,
 } from "../../service/domain/repositories";
 import {ServiceSettings} from "../settings";

@@ -72,7 +72,7 @@ export class VersionsTable extends Component<VersionsTableProps> {
                 <td>
                   <a
                     href={
-                      '/signed-contributor-license-agreement?version=' +
+                      "/signed-contributor-license-agreement?version=" +
                       item.id
                     }
                     target="_blank"

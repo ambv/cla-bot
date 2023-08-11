@@ -7,7 +7,8 @@ export default (req: NextApiRequest, res: NextApiResponse) => {
 
   if (!state) {
     // A state context is required to recreate the PR and original poster ID
-    return res.status(400).end("Missing state context.");
+    res.status(400).end("Missing state context.");
+    return;
   }
 
   if (Array.isArray(state)) {

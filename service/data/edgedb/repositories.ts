@@ -1,3 +1,5 @@
+import e from "../../../dbschema/edgeql-js";
+
 import {EdgeDBRepository} from "./base";
 import {injectable} from "inversify";
 import {RepositoriesRepository, Repository} from "../../domain/repositories";
@@ -8,29 +10,15 @@ export class EdgeDBRepositoriesRepository
   implements RepositoriesRepository
 {
   async getConfiguredRepositories(): Promise<Repository[]> {
-    const items = await this.run(async (connection) => {
-      return await connection.query<{
-        id: string;
-        full_name: string;
-        agreementId: string;
-        agreementName: string;
-      }>(
-        `SELECT Repository {
-          full_name,
-          agreementId := .agreement.id,
-          agreementName := .agreement.name
-        };`
-      );
-    });
-
-    return items.map(
-      (entity) =>
-        new Repository(
-          entity.id,
-          entity.full_name,
-          entity.agreementId,
-          entity.agreementName
-        )
+    return await this.run(async (connection) =>
+      e
+        .select(e.Repository, (repo) => ({
+          id: true,
+          fullName: repo.full_name,
+          agreementId: repo.agreement.id,
+          agreementName: repo.agreement.name,
+        }))
+        .run(connection)
     );
   }
 
@@ -38,32 +26,25 @@ export class EdgeDBRepositoriesRepository
     agreementId: string,
     repositoryId: string
   ): Promise<void> {
-    await this.run(async (connection) => {
-      await connection.query(
-        `
-        INSERT Repository {
-          full_name := <str>$repository_id,
-          agreement := (SELECT Agreement FILTER .id = <uuid>$agreement_id)
-        }
-        `,
-        {
-          repository_id: repositoryId,
-          agreement_id: agreementId,
-        }
-      );
-    });
+    await this.run(async (connection) =>
+      e
+        .insert(e.Repository, {
+          full_name: repositoryId,
+          agreement: e.select(e.Agreement, (a) => ({
+            filter_single: {id: agreementId},
+          })),
+        })
+        .run(connection)
+    );
   }
 
   async deleteRepositoryConfiguration(id: string): Promise<void> {
-    await this.run(async (connection) => {
-      await connection.queryRequiredSingle(
-        `
-        DELETE Repository FILTER .id = <uuid>$id
-        `,
-        {
-          id,
-        }
-      );
-    });
+    await this.run(async (connection) =>
+      e
+        .delete(e.Repository, (repo) => ({
+          filter_single: {id},
+        }))
+        .run(connection)
+    );
   }
 }

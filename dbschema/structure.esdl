@@ -35,7 +35,9 @@ module default {
             default := datetime_current();
         }
 
-        multi link versions -> AgreementVersion;
+        multi link versions -> AgreementVersion {
+            constraint exclusive;
+        }
     }
 
     type AgreementVersion {
@@ -48,7 +50,9 @@ module default {
             default := true;
         }
 
-        multi link texts -> AgreementText;
+        multi link texts -> AgreementText {
+            constraint exclusive;
+        }
 
         required property creation_time -> datetime {
             default := datetime_current();

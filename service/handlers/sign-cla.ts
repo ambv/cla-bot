@@ -1,16 +1,13 @@
 import {async_retry} from "../common/resiliency";
-import {StatusChecksService} from "../../service/domain/checks";
+import {type StatusChecksService} from "../../service/domain/checks";
 import {
   ContributorLicenseAgreement,
   ClaCheckInput,
-  ClaRepository,
+  type ClaRepository,
 } from "../../service/domain/cla";
 import {ClaCheckHandler} from "./check-cla";
-import {
-  CommentsRepository,
-  CommentsService,
-} from "../../service/domain/comments";
-import {EmailInfo, UsersService} from "../../service/domain/users";
+import {type CommentsRepository} from "../../service/domain/comments";
+import {type EmailInfo, type UsersService} from "../../service/domain/users";
 import {inject, injectable} from "inversify";
 import {SafeError} from "../common/web";
 import {TokensHandler} from "./tokens";
@@ -42,21 +39,20 @@ class SignClaHandler {
     emailInfo: EmailInfo,
     agreementVersionId: string
   ): Promise<ContributorLicenseAgreement> {
-    const cla = new ContributorLicenseAgreement(
-      uuid(),
-      emailInfo.email.toString(),
+    const cla = {
+      id: uuid(),
+      email: emailInfo.email.toString(),
       username,
-      agreementVersionId,
-      new Date()
-    );
-
+      versionId: agreementVersionId,
+      signedAt: new Date(),
+    };
     await this._claRepository.saveCla(cla);
     return cla;
   }
 
   private getAllAuthors(data: ClaCheckInput): string[] {
     if (data.authors) {
-      return data.authors.map(email => email.toLowerCase());
+      return data.authors.map((email) => email.toLowerCase());
     }
 
     throw new Error("Missing authors information in state.");

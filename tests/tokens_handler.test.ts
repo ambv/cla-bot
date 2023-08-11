@@ -49,7 +49,8 @@ describe("TokensHandler", () => {
   it("Throws exception for an invalid token", () => {
     const stateHandler = TokensHandler.withServices(new TestServiceSettings());
 
-    const invalidToken = `eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE1ODg5NDkwNzIs
+    const invalidToken =
+      `eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE1ODg5NDkwNzIs
     ImV4cCI6MTU4ODk0OTY3MiwiaXNzIjoiNjI0MjcifQ.H3LLTic7JpvXkFSyFkvb-c3n_znNSglwgTdQxSPWY
     L05O8pmB9Tewj0BGUsgOeFrsWrhVTIqLVtp4f6kFaeqaswnSNHQhm1_RWD760zFOkOZd2_Ha6YrywtRyOOgm
     YWjOr94urW9LbGyoNcykJuspD112YrovVns2NfMXgvd4zpFYdxPpozfEgyU_-PXBQbz_2sxG7fsbD-x9XYKq

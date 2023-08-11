@@ -1,3 +1,5 @@
+import e from "../../../dbschema/edgeql-js";
+
 import {EdgeDBRepository} from "./base";
 import {injectable} from "inversify";
 import {
@@ -11,63 +13,45 @@ export class EdgeDBAdministratorsRepository
   implements AdministratorsRepository
 {
   async getAdministrators(): Promise<Administrator[]> {
-    const items = await this.run(async (connection) => {
-      return await connection.query<{id: string; email: string}>(
-        `SELECT Administrator {
-          id,
-          email
-        };`
-      );
+    return await this.run(async (connection) => {
+      return e
+        .select(e.Administrator, () => ({
+          id: true,
+          email: true,
+        }))
+        .run(connection);
     });
-
-    return items.map((entity) => new Administrator(entity.id, entity.email));
   }
 
   async getAdministratorByEmail(email: string): Promise<Administrator | null> {
-    const item = await this.run(async (connection) => {
-      return await connection.querySingle<{id: string; email: string}>(
-        `SELECT Administrator {
-          id,
-          email
-        } FILTER .email = <str>$email;`,
-        {
-          email,
-        }
-      );
+    return await this.run(async (connection) => {
+      return e
+        .select(e.Administrator, (admin) => ({
+          id: true,
+          email: true,
+          filter_single: {email},
+        }))
+        .run(connection);
     });
-
-    if (!item) {
-      return null;
-    }
-
-    return new Administrator(item.id, item.email);
   }
 
   async addAdministrator(email: string): Promise<void> {
     await this.run(async (connection) => {
-      await connection.query(
-        `
-        INSERT Administrator {
-          email := <str>$email
-        }
-        `,
-        {
-          email,
-        }
-      );
+      await e
+        .insert(e.Administrator, {
+          email: email,
+        })
+        .run(connection);
     });
   }
 
   async removeAdministrator(id: string): Promise<void> {
     await this.run(async (connection) => {
-      await connection.queryRequiredSingle(
-        `
-        DELETE Administrator FILTER .id = <uuid>$id
-        `,
-        {
-          id,
-        }
-      );
+      await e
+        .delete(e.Administrator, (a) => ({
+          filter: e.op(a.id, "=", e.uuid(id)),
+        }))
+        .run(connection);
     });
   }
 }

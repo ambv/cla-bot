@@ -24,7 +24,8 @@ export default createAPIHandler({
       const rawState = req.query.state;
 
       if (typeof rawState !== "string") {
-        return res.status(400).end("Missing state parameter");
+        res.status(400).end("Missing state parameter");
+        return;
       }
 
       const tokensHandler = container.get<TokensHandler>(TYPES.TokensHandler);

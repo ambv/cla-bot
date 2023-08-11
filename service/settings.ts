@@ -1,5 +1,5 @@
-import { getEnvSettingOrThrow, getEnvSettingOrDefault } from "./common/settings";
-import { injectable } from "inversify";
+import {getEnvSettingOrThrow, getEnvSettingOrDefault} from "./common/settings";
+import {injectable} from "inversify";
 
 /**
  * Common service settings, not specific to an external service.

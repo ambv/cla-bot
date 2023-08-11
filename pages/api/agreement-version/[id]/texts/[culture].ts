@@ -18,12 +18,14 @@ function parseQueryParams(
 
   if (typeof id !== "string") {
     // should never happen by definition
-    return res.status(400).end("Invalid object id");
+    res.status(400).end("Invalid object id");
+    return;
   }
 
   if (typeof culture !== "string") {
     // should never happen by definition
-    return res.status(400).end("Invalid culture code");
+    res.status(400).end("Invalid culture code");
+    return;
   }
 
   return {id, culture};
@@ -46,10 +48,11 @@ export default createAPIHandler({
         );
 
       if (!data) {
-        return res.status(404).end("Agreement text not found.");
+        res.status(404).end("Agreement text not found.");
+        return;
       }
 
-      return res.status(200).json(data);
+      res.status(200).json(data);
     },
   },
   PUT: async (req: NextApiRequest, res: NextApiResponse) => {
@@ -69,6 +72,6 @@ export default createAPIHandler({
       body.title,
       body.text
     );
-    return res.status(204).end();
+    res.status(204).end();
   },
 });

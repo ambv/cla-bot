@@ -4,7 +4,6 @@ import ErrorPanel from "../../common/error";
 import Loader from "../../common/loader";
 import {changeHandler} from "../../forms";
 import {post} from "../../fetch";
-import {validateEmail} from "../../../service/common/emails";
 import {ApplicationError} from "../../errors";
 
 interface NewAdministratorFormProps {
@@ -47,16 +46,6 @@ export default class NewAdministratorForm extends Component<
       this.setState({
         emailError: true,
         emailHelperText: "Please insert a value",
-      });
-      anyError = true;
-    }
-
-    if (!validateEmail(email.trim())) {
-      this.setState({
-        emailError: true,
-        emailHelperText:
-          "The value is not a valid email address. " +
-          "A single address is supported.",
       });
       anyError = true;
     }
@@ -107,13 +96,8 @@ export default class NewAdministratorForm extends Component<
   }
 
   render(): ReactElement {
-    const {
-      email,
-      emailError,
-      emailHelperText,
-      submitting,
-      submitError,
-    } = this.state;
+    const {email, emailError, emailHelperText, submitting, submitError} =
+      this.state;
 
     return (
       <div>

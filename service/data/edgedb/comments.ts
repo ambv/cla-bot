@@ -1,3 +1,5 @@
+import e from "../../../dbschema/edgeql-js";
+
 import {CommentInfo, CommentsRepository} from "../../domain/comments";
 import {EdgeDBRepository} from "./base";
 import {injectable} from "inversify";
@@ -10,30 +12,18 @@ export class EdgeDBCommentsRepository
   async getCommentInfoByPullRequestId(
     pullRequestId: number
   ): Promise<CommentInfo | null> {
-    const item = await this.run(async (connection) => {
-      return await connection.querySingle<{
-        id: string;
-        comment_id: string;
-        creation_time: Date;
-      }>(
-        `SELECT CommentInfo {
-          comment_id,
-          creation_time
-        } FILTER .pull_request_id = <int64>$0`,
-        [pullRequestId]
-      );
-    });
+    return await this.run(async (connection) =>
+      e
+        .select(e.CommentInfo, (c) => ({
+          id: true,
+          commentId: c.comment_id,
+          pullRequestId: c.pull_request_id,
+          createdAt: c.creation_time,
 
-    if (item) {
-      return {
-        id: item.id,
-        commentId: item.comment_id,
-        pullRequestId,
-        createdAt: item.creation_time,
-      };
-    }
-
-    return null;
+          filter_single: {pull_request_id: pullRequestId},
+        }))
+        .run(connection)
+    );
   }
 
   async storeCommentInfo(
@@ -41,21 +31,14 @@ export class EdgeDBCommentsRepository
     pullRequestId: number,
     createdAt: Date
   ): Promise<void> {
-    await this.run(async (connection) => {
-      await connection.query(
-        `
-        INSERT CommentInfo {
-          comment_id := <str>$comment_id,
-          pull_request_id := <int64>$pull_request_id,
-          creation_time := <datetime>$creation_time
-        }
-        `,
-        {
+    await this.run(async (connection) =>
+      e
+        .insert(e.CommentInfo, {
           comment_id: commentId,
           pull_request_id: pullRequestId,
           creation_time: createdAt,
-        }
-      );
-    });
+        })
+        .run(connection)
+    );
   }
 }

@@ -1,4 +1,3 @@
-import fetch from "cross-fetch";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import {async_retry} from "../../common/resiliency";
@@ -58,11 +57,11 @@ export class GitHubAccessHandler {
   }
 
   private getPrivateKeyPath(): string {
-    const privateRsaKeyPath = process.env.GITHUB_RSA_PRIVATE_KEY;
+    const privateRsaKeyPath = process.env.GITHUB_RSA_PRIVATE_KEY_FILE;
 
     if (!privateRsaKeyPath) {
       throw new Error(
-        "Missing GITHUB_RSA_PRIVATE_KEY environmental variable: " +
+        "Missing GITHUB_RSA_PRIVATE_KEY_FILE environmental variable: " +
           "it must contain the path to a private RSA key used to generate JWTs"
       );
     }
@@ -116,9 +115,8 @@ export class GitHubAccessHandler {
 
   getCachedAccessToken(targetAccountId: number): AccessToken | null {
     if (targetAccountId in this._accountAccessTokensCache) {
-      const cachedAccessToken = this._accountAccessTokensCache[
-        targetAccountId
-      ];
+      const cachedAccessToken =
+        this._accountAccessTokensCache[targetAccountId];
 
       // applies a margin of 60 seconds while checking for expiration
       if (new Date().getTime() + 60000 < cachedAccessToken.expiresAt) {
@@ -227,9 +225,8 @@ export class GitHubAccessHandler {
     );
 
     // tslint:disable-next-line: max-line-length
-    const installationAccessTokenResult = await this.getAccessTokenForInstallation(
-      installationId
-    );
+    const installationAccessTokenResult =
+      await this.getAccessTokenForInstallation(installationId);
 
     this.setCachedAccessToken(targetAccountId, {
       value: installationAccessTokenResult.token,

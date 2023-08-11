@@ -33,7 +33,8 @@ export default createAPIHandler({
         );
       } catch (e) {
         if (httpErrors.isHttpError(e)) {
-          return res.status(e.statusCode).json({error: e.message});
+          res.status(e.statusCode).json({error: e.message});
+          return;
         } else {
           throw e;
         }
@@ -42,7 +43,8 @@ export default createAPIHandler({
       try {
         await _handler(req, res);
       } catch (e) {
-        return res.status(400).json({error: "Webhook error"});
+        res.status(400).json({error: "Webhook error"});
+        return;
       }
     },
   },
@@ -112,21 +114,24 @@ async function _handler(
   const event = req.headers["x-github-event"];
 
   if (!event) {
-    return res.status(400).end("Missing X-GitHub-Event header");
+    res.status(400).end("Missing X-GitHub-Event header");
+    return;
   }
 
   switch (event) {
     case "ping":
       // sent when configuring a webhook
-      return res.status(200).end("Hi there!");
+      res.status(200).end("Hi there!");
+      return;
     case "pull_request":
       const {body} = req;
 
       const action = body.action;
       if (["opened", "reopened", "synchronize"].indexOf(action) === -1) {
-        return res
+        res
           .status(200)
           .end(`Doing nothing: the pull_request action is ${action}`);
+        return;
       }
 
       const gitHubUserId = body?.pull_request?.user?.id;
@@ -152,8 +157,7 @@ async function _handler(
         !targetRepositoryFullName ||
         !targetRepositoryName
       ) {
-        return res.status(400)
-          .end(`Expected a pull request webhook payload with:
+        res.status(400).end(`Expected a pull request webhook payload with:
           pull_request.number;
           pull_request.user.id;
           pull_request.url;
@@ -164,10 +168,12 @@ async function _handler(
           repository.full_name;
           repository.name;
         `);
+        return;
       }
 
       if (Buffer.from(pullRequestHeadSha, "hex").length === 0) {
-        return res.status(400).end(`Invalid pull request HEAD SHA`);
+        res.status(400).end(`Invalid pull request HEAD SHA`);
+        return;
       }
 
       const input: ClaCheckInput = {
@@ -190,9 +196,11 @@ async function _handler(
       };
 
       await claHandler.checkCla(input);
-      return res.status(200).end("OK");
+      res.status(200).end("OK");
+      return;
 
     default:
-      return res.status(400).end(`The event ${event} is not handled.`);
+      res.status(400).end(`The event ${event} is not handled.`);
+      return;
   }
 }

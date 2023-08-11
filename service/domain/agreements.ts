@@ -1,45 +1,17 @@
 export class AgreementListItem {
   id: string | null;
   name: string;
-  description?: string;
-  creationTime?: Date;
-
-  constructor(
-    id: string | null,
-    name: string,
-    description?: string,
-    creationTime?: Date
-  ) {
-    this.id = id;
-    this.name = name;
-    this.description = description;
-    this.creationTime = creationTime;
-  }
+  description: string | null;
+  creationTime: Date | null;
 }
 
 export class AgreementVersion {
   id: string;
-  agreementId?: string;
+  agreementId?: string | null;
   current: boolean;
   draft: boolean;
   texts?: AgreementText[];
   creationTime: Date;
-
-  constructor(
-    id: string,
-    current: boolean,
-    draft: boolean,
-    agreementId: string | undefined,
-    creationTime: Date,
-    texts?: AgreementText[]
-  ) {
-    this.id = id;
-    this.current = current;
-    this.draft = draft;
-    this.texts = texts;
-    this.agreementId = agreementId;
-    this.creationTime = creationTime;
-  }
 }
 
 export class AgreementText {
@@ -47,27 +19,9 @@ export class AgreementText {
   title: string;
   text: string;
   culture: string;
-  versionId: string;
+  versionId?: string | null;
   updateTime: Date;
   creationTime: Date;
-
-  constructor(
-    id: string,
-    title: string,
-    text: string,
-    culture: string,
-    versionId: string,
-    updateTime: Date,
-    creationTime: Date
-  ) {
-    this.id = id;
-    this.text = text;
-    this.title = title;
-    this.culture = culture;
-    this.versionId = versionId;
-    this.updateTime = updateTime;
-    this.creationTime = creationTime;
-  }
 }
 
 export interface AgreementTextInput {
@@ -81,25 +35,10 @@ export interface AgreementTextInput {
  */
 export class RepositoryAgreementInfo {
   versionId: string;
-
-  constructor(versionId: string) {
-    this.versionId = versionId;
-  }
 }
 
 export class Agreement extends AgreementListItem {
   versions: AgreementVersion[];
-
-  constructor(
-    id: string,
-    name: string,
-    description: string,
-    creationTime: Date,
-    versions: AgreementVersion[]
-  ) {
-    super(id, name, description, creationTime);
-    this.versions = versions;
-  }
 }
 
 export interface AgreementsRepository {

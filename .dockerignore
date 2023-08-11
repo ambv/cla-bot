@@ -6,11 +6,12 @@
 **/node_modules
 
 /docs
+/.next
+/.vscode
 /yarn-error.log
-
-# PlantUML output folder
-/out
+/fly.toml
 
 Dockerfile
 Dockerfile.cpython
 README.md
+.env*

@@ -1,4 +1,3 @@
-import {fetch} from "cross-fetch";
 import {NotFoundError, ApplicationError} from "./errors";
 
 const JSON_ContentType = "application/json; charset=utf-8";

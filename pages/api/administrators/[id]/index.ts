@@ -15,10 +15,11 @@ export default createAPIHandler({
 
     if (typeof id !== "string") {
       // should never happen by definition
-      return res.status(400).end("Invalid object id");
+      res.status(400).end("Invalid object id");
+      return;
     }
 
     await administratorsHandler.removeAdministrator(id);
-    return res.status(204).end();
+    res.status(204).end();
   },
 });

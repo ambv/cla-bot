@@ -8,7 +8,7 @@ export default new ClientOAuth2({
   clientSecret: getEnvSettingOrThrow("GITHUB_OAUTH_APPLICATION_SECRET"),
   accessTokenUri: "https://github.com/login/oauth/access_token",
   authorizationUri: "https://github.com/login/oauth/authorize",
-  redirectUri:
-    `${OWN_SERVER_BASE_URL}/api/administrators/auth/github/callback`,
+  /* tslint:disable-next-line */
+  redirectUri: `${OWN_SERVER_BASE_URL}/api/administrators/auth/github/callback`,
   scopes: ["profile", "user:email"],
 });

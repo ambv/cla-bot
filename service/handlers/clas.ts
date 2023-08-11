@@ -2,14 +2,13 @@ import {inject, injectable} from "inversify";
 import {BadRequestError, ConflictError} from "../common/web";
 import {TYPES} from "../../constants/types";
 import {
-  ClaRepository,
+  type ClaRepository,
   ContributorLicenseAgreement,
   ClasImportInput,
   ClasImportOutput,
   ClasImportEntryResult,
 } from "../domain/cla";
-import {validateEmail} from "../common/emails";
-import {AgreementsRepository} from "../domain/agreements";
+import {type AgreementsRepository} from "../domain/agreements";
 import {v4 as uuid} from "uuid";
 import {ImportEntry} from "../../components/admin/clas/contracts";
 
@@ -32,12 +31,6 @@ export class ClasHandler {
   async getClaByEmail(
     email: string
   ): Promise<ContributorLicenseAgreement | null> {
-    if (!validateEmail(email)) {
-      throw new BadRequestError(
-        "The given value is not a valid email address"
-      );
-    }
-
     return await this._clasRepository.getClaByEmailAddress(email);
   }
 
@@ -65,25 +58,14 @@ export class ClasHandler {
     const results: ClasImportEntryResult[] = [];
     for (const entry of data.entries) {
       try {
-        // validate email
-        if (!validateEmail(entry.email)) {
-          results.push({
-            success: false,
-            entry: simplifyEntry(entry),
-            error: "Invalid email",
-          });
-          continue;
-        }
+        await this._clasRepository.saveCla({
+          id: uuid(),
+          email: entry.email.trim().toLowerCase(),
+          username: entry.username.trim(),
+          versionId: currentVersion.id,
+          signedAt: new Date(),
+        });
 
-        await this._clasRepository.saveCla(
-          new ContributorLicenseAgreement(
-            uuid(),
-            entry.email.trim().toLowerCase(),
-            entry.username.trim(),
-            currentVersion.id,
-            new Date()
-          )
-        );
         results.push({
           success: true,
           entry: simplifyEntry(entry),

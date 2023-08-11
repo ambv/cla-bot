@@ -1,4 +1,3 @@
-import fetch from "cross-fetch";
 import {async_retry} from "../../common/resiliency";
 import {EmailInfo, UserInfo, UsersService} from "../../domain/users";
 import {expectSuccessfulResponse} from "../../common/web";

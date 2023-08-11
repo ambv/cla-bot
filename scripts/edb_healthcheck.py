@@ -2,8 +2,9 @@
 # This file runs on Debian Buster and needs to be Python 3.7 compatible.
 from __future__ import annotations
 
+import asyncio
 import pathlib
-import edgedb
+import shutil
 
 
 socket_dir = pathlib.Path("/run/edgedb")
@@ -17,24 +18,36 @@ async def healthcheck() -> None:
     if not admin_socket.is_socket():
         raise RuntimeError(f"Socket {admin_socket} not present")
 
-    try:
-        conn = None
-        conn = await edgedb.async_connect(
-            host=str(socket_dir),
-            user="edgedb",
-            database="edgedb",
-            admin=True,
-        )
-    except Exception as e:
-        raise RuntimeError(f"Connecting to {admin_socket} failed: {e}")
+    exe = shutil.which("edgedb")
+    if not exe:
+        raise RuntimeError("Missing `edgedb` client executable")
 
-    try:
-        await conn.execute("SELECT 1;")
-        return
-    except Exception as e:
-        raise RuntimeError(f"Query failed: {type(e)} {e}")
-    finally:
-        if conn is not None:
-            await conn.aclose()
+    args = ["--admin", f"--host={admin_socket}"]
+    command = "SELECT 1;"
+    proc = await asyncio.create_subprocess_exec(
+        exe,
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        stdin=asyncio.subprocess.PIPE,
+    )
 
-    raise RuntimeError
+    stdout_b, stderr_b = await proc.communicate(command.encode())
+    stdout = "" if stdout_b is None else stdout_b.decode().strip()
+    stderr = "" if stderr_b is None else stderr_b.decode().strip()
+
+    if proc.returncode != 0:
+        msg = "`edgedb` returned with code {proc.returncode}:"
+        if stderr:
+            msg += "\n" + stderr
+        if stdout:
+            msg += "\n" + stdout
+        raise RuntimeError(msg)
+
+    if stdout != "1":
+        msg = "`edgedb` returned unexpected result:"
+        if stderr:
+            msg += "\n" + stderr
+        if stdout:
+            msg += "\n" + stdout
+        raise RuntimeError(msg)

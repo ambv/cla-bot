@@ -16,6 +16,6 @@ export default createAPIHandler({
     const {email} = req.body;
 
     await administratorsHandler.addAdministrator(email);
-    return res.status(204).end();
+    res.status(204).end();
   },
 });

@@ -22,7 +22,8 @@ export default createAPIHandler({
       const versionId = req.query.version;
 
       if (typeof versionId !== "string") {
-        return res.status(400).end("Missing version parameter");
+        res.status(400).end("Missing version parameter");
+        return;
       }
 
       const licensesHandler = container.get<AgreementsHandler>(

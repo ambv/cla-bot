@@ -5,9 +5,9 @@ export function getHeaders(accessToken: string): {[key: string]: string} {
   };
 }
 
-export function getHeadersForJsonContent(
-  accessToken: string
-): {[key: string]: string} {
+export function getHeadersForJsonContent(accessToken: string): {
+  [key: string]: string;
+} {
   const headers = getHeaders(accessToken);
   headers["Content-Type"] = "application/json; charset=utf-8";
   return headers;

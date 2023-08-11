@@ -15,6 +15,6 @@ export default createAPIHandler({
     const data = req.body as ClasImportInput;
 
     const result = await clasHandler.importClas(data);
-    return res.status(200).json(result);
+    res.status(200).json(result);
   },
 });

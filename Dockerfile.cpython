@@ -1,7 +1,7 @@
 FROM ambv/cla-bot-frontend:latest AS frontend
 FROM edgedb/edgedb-cli:linux-x86_64-latest AS edgedbcli
-FROM node:14.16-buster-slim AS final
-ARG version=1
+FROM node:18.16-bullseye-slim AS final
+ARG version=2
 WORKDIR /app
 COPY --from=frontend /app .
 COPY --from=edgedbcli /usr/bin/edgedb /usr/bin/edgedb
@@ -15,7 +15,7 @@ apt-get update \
 && pip3 --no-cache-dir install setuptools \
 && pip3 --no-cache-dir install --only-binary=:all: --pre edgedb \
 && (curl https://packages.edgedb.com/keys/edgedb.asc | apt-key add -) \
-&& echo deb https://packages.edgedb.com/apt buster main \
+&& echo deb https://packages.edgedb.com/apt bullseye main \
         >/etc/apt/sources.list.d/edgedb.list \
 && (try=1; while [ $try -le 5 ]; do apt-get update && break || true; \
     try=$(( $try + 1 )); sleep 1; done) \

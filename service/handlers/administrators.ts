@@ -1,14 +1,13 @@
 import {inject, injectable} from "inversify";
 import {TYPES} from "../../constants/types";
-import {
+import type {
   Administrator,
   AdministratorsRepository,
 } from "../domain/administrators";
 import {BadRequestError, UnauthorizedError} from "../common/web";
-import {validateEmail} from "../common/emails";
-import {UsersService} from "../domain/users";
+import type {UsersService} from "../domain/users";
 import {TokensHandler} from "./tokens";
-import {OrganizationsService} from "../domain/organizations";
+import type {OrganizationsService} from "../domain/organizations";
 import {ServiceSettings} from "../settings";
 
 @injectable()
@@ -34,16 +33,6 @@ export class AdministratorsHandler {
     if (!email || !email.trim()) throw new BadRequestError("Missing email");
 
     email = email.trim();
-
-    // Note: it was taken into consideration to support multiple email
-    // addresses in a single web request and comma separated,
-    // but it makes much for much more complex error handling: for example
-    // to handle partial failures, conflicts, etc.
-    // For this version of the application, administrators can be inserted
-    // one at a time.
-    if (!validateEmail(email)) {
-      throw new BadRequestError("Invalid email address");
-    }
 
     // TODO: it would be nice to send an invitation email to new
     // administrators (out of the scope of the MVP)

@@ -5,7 +5,6 @@ import {Component, ReactElement} from "react";
 import {ContributorLicenseAgreement} from "./contracts";
 import ErrorPanel from "../../common/error";
 import Loader from "../../common/loader";
-import {validateEmail} from "../../../service/common/emails";
 import {ApplicationError} from "../../errors";
 import {get} from "../../fetch";
 
@@ -44,14 +43,6 @@ export class ClaSearch extends Component<{}, ClaSearchState> {
     }
 
     search = search.trim();
-
-    if (!validateEmail(search)) {
-      this.setState({
-        searchError: true,
-        searchHelperText: "The value is not a valid email address.",
-      });
-      return;
-    }
 
     this.setState({
       waiting: true,

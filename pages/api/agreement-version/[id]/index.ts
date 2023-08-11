@@ -23,13 +23,15 @@ export default createAPIHandler({
 
       if (typeof id !== "string") {
         // should never happen by definition
-        return res.status(400).end("Invalid object id");
+        res.status(400).end("Invalid object id");
+        return;
       }
 
       const data = await agreementsHandler.getAgreementVersion(id);
 
       if (!data) {
-        return res.status(404).end("Agreement version not found.");
+        res.status(404).end("Agreement version not found.");
+        return;
       }
 
       res.status(200).json(data);

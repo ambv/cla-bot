@@ -14,15 +14,17 @@ export default createAPIHandler({
 
     if (typeof email !== "string") {
       // should never happen by definition
-      return res.status(400).end("Invalid email id");
+      res.status(400).end("Invalid email id");
+      return;
     }
 
     const data = await clasHandler.getClaByEmail(email);
 
     if (!data) {
-      return res.status(404).end("Object not found.");
+      res.status(404).end("Object not found.");
+      return;
     }
 
-    return res.status(200).json(data);
+    res.status(200).json(data);
   },
 });

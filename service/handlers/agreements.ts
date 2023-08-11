@@ -1,7 +1,7 @@
 import {
   Agreement,
   AgreementListItem,
-  AgreementsRepository,
+  type AgreementsRepository,
   AgreementText,
   AgreementVersion,
 } from "../domain/agreements";
@@ -183,7 +183,7 @@ export class AgreementsHandler {
   private readAgreementVersionParentId(version: AgreementVersion): string {
     const agreementId = version.agreementId;
 
-    if (agreementId === undefined)
+    if (agreementId === undefined || agreementId === null)
       throw new ServerError("Missing parent id in version context.");
 
     return agreementId;

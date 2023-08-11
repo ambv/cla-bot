@@ -1,6 +1,6 @@
-export function trimKeysAndValues(item: {
+export function trimKeysAndValues(item: {[key: string]: string}): {
   [key: string]: string;
-}): {[key: string]: string} {
+} {
   const result: {[key: string]: string} = {};
 
   for (const key of Object.keys(item)) {
