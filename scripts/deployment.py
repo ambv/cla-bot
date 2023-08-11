@@ -24,7 +24,7 @@ async def main(mv: Minivisor | None = None) -> None:
         "--tls-cert-mode=generate_self_signed",
         f"--backend-dsn={DATABASE_URL}",
         with_healthcheck=healthcheck,
-        grace_period=120.0,  # some grace for bootstrapping
+        grace_period=180.0,  # some grace for bootstrapping
     )
     password_command = f"""
         alter role edgedb {{
