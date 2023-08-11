@@ -8,6 +8,7 @@ import asyncio.subprocess
 import ctypes
 import ctypes.util
 import os
+import shutil
 import signal
 import sys
 from urllib.parse import urlparse
@@ -49,6 +50,10 @@ def untangle_github_rsa_private_key() -> None:
         key_file.write(source)
 
 
+def matches(cmd: str, sub: str) -> bool:
+    return cmd == sub or f"/bin/sh -c {sub}" in cmd
+
+
 async def main() -> None:
     PORT = os.environ["PORT"]
     DATABASE_URL = os.environ["DATABASE_URL"]
@@ -70,14 +75,17 @@ async def main() -> None:
 
     if len(argv) == 1:
         cmd = argv[0]
-        if cmd == "deployment":
+        if matches(cmd, "deployment"):
             new_release = True
-        elif "/bin/sh -c deployment" in cmd:
-            new_release = True
-        elif cmd == "default":
+        elif matches(cmd, "default"):
             new_release = False
-        elif "/bin/sh -c default" in cmd:
-            new_release = False
+        elif matches(cmd, "bash"):
+            await mv.shutdown()
+            # start the shell
+            bash_executable = shutil.which("bash")
+            if not bash_executable:
+                raise RuntimeError("Missing bash executable")
+            os.execv(bash_executable, ('bash',))
         else:
             await mv.out.put(b"Invalid entrypoint sub-command: " + repr(cmd).encode())
             await mv.shutdown()

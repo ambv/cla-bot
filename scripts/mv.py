@@ -279,9 +279,10 @@ class Minivisor:
             await gracefully_close(proc, cmdline=cmdline)
 
         # At this point all followers should be finished but let's ensure that.
-        for follower in self.followers:
-            follower.cancel()
-        await asyncio.wait(self.followers, timeout=2.0)
+        if self.followers:
+            for follower in self.followers:
+                follower.cancel()
+            await asyncio.wait(self.followers, timeout=2.0)
 
         # Finally we can close our output queue display.
         self.display.cancel()
