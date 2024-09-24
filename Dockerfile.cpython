@@ -29,10 +29,10 @@ apt-get update \
 && chown -R edgedb /var/run/edgedb \
 && chmod 775 /var/run/edgedb
 
-ENV LANG en_US.utf8
-ENV NODE_ENV production
-ENV PORT 80
-ENV DATABASE_URL postgres://...
+ENV LANG=en_US.utf8
+ENV NODE_ENV=production
+ENV PORT=80
+ENV DATABASE_URL=postgres://...
 
 COPY ./scripts/docker-entrypoint-clabot.py /home/docker-entrypoint.py
 COPY ./scripts/mv.py /home/mv.py
