@@ -37,7 +37,7 @@ async def healthcheck() -> None:
     stderr = "" if stderr_b is None else stderr_b.decode().strip()
 
     if proc.returncode != 0:
-        msg = "`edgedb` returned with code {proc.returncode}:"
+        msg = f"`edgedb` returned with code {proc.returncode}:"
         if stderr:
             msg += "\n" + stderr
         if stdout:
