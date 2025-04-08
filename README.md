@@ -2,6 +2,10 @@
 
 A GitHub bot and Web UI for managing contributor license agreements.
 
+## THIS IS NO LONGER USED
+See [https://github.com/psf/clabot](https://github.com/psf/clabot) for
+the Django-based replacement.
+
 ## Installation
 
 This instance is forked from the original and ran by the
